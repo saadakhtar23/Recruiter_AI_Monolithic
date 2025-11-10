@@ -34,6 +34,31 @@ const applicationSchema = new mongoose.Schema({
         type: String,
         maxlength: [2000, 'Cover letter cannot exceed 2000 characters']
     },
+    Resume: {
+        type: String,
+        maxlength: [1000, 'Resume URL cannot exceed 1000 characters']
+    },
+    skills: [String],
+    currentCTC: {
+        type: Number,
+        min: [0, 'Current CTC cannot be negative']
+    },
+    expectedCTC: {
+        type: Number,
+        min: [0, 'Expected CTC cannot be negative']
+    },
+    currentLocation: {
+        type: String,
+        maxlength: [100, 'Location cannot exceed 100 characters']
+    },
+    NoticePeriod: {
+        type: Number, // in days
+        min: [0, 'Notice period cannot be negative']
+    },
+    willingToRelocate: {
+        type: Boolean,
+        default: false
+    },
     customAnswers: [{
         questionId: {
             type: mongoose.Schema.Types.ObjectId,

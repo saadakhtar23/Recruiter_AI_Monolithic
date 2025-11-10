@@ -1,0 +1,256 @@
+{
+  "info": {
+    "name": "Candidate API Collection",
+    "_postman_id": "candidate-api-collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Register Candidate",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": {
+            "personalInfo": {
+              "firstName": "John",
+              "lastName": "Doe",
+              "email": "john.doe@example.com",
+              "phone": "+1234567890",
+              "dateOfBirth": "1990-01-01",
+              "gender": "male",
+              "nationality": "American"
+            },
+            "contactInfo": {
+              "address": {
+                "street": "123 Main St",
+                "city": "New York",
+                "state": "NY",
+                "country": "USA",
+                "zipCode": "10001"
+              },
+              "linkedinUrl": "https://www.linkedin.com/in/johndoe",
+              "githubUrl": "https://github.com/johndoe",
+              "portfolioUrl": "https://johndoe.com"
+            },
+            "professionalInfo": {
+              "currentTitle": "Senior Software Engineer",
+              "currentCompany": "Tech Corp",
+              "totalExperience": 5,
+              "skills": [
+                {
+                  "name": "JavaScript",
+                  "level": "expert",
+                  "yearsOfExperience": 5
+                },
+                {
+                  "name": "React",
+                  "level": "advanced",
+                  "yearsOfExperience": 3
+                }
+              ],
+              "industries": ["Technology", "E-commerce"],
+              "preferredRoles": ["Full Stack Developer", "Tech Lead"],
+              "salaryExpectation": {
+                "minimum": 100000,
+                "maximum": 150000,
+                "currency": "USD"
+              },
+              "availabilityDate": "2024-03-01",
+              "noticePeriod": "2-months"
+            },
+            "education": [
+              {
+                "degree": "Bachelor of Science",
+                "field": "Computer Science",
+                "institution": "University of Technology",
+                "startYear": 2014,
+                "endYear": 2018,
+                "grade": "3.8/4.0",
+                "isCompleted": true
+              }
+            ],
+            "experience": [
+              {
+                "title": "Senior Software Engineer",
+                "company": "Tech Corp",
+                "location": "New York, USA",
+                "startDate": "2020-01-01",
+                "endDate": null,
+                "isCurrent": true,
+                "description": "Leading full-stack development projects",
+                "achievements": [
+                  "Reduced system latency by 40%",
+                  "Led team of 5 developers"
+                ],
+                "technologies": ["React", "Node.js", "MongoDB"]
+              }
+            ],
+            "preferences": {
+              "jobTypes": ["full-time"],
+              "workLocation": ["hybrid", "remote"],
+              "preferredLocations": ["New York", "Boston"],
+              "willingToRelocate": true
+            },
+            "account": {
+              "password": "SecurePass123!"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/candidates/register"
+      }
+    },
+    {
+      "name": "Upload Resume",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{candidateToken}}" }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { 
+              "key": "resume", 
+              "type": "file", 
+              "src": "/path/to/resume.pdf",
+              "description": "Resume file (PDF/DOC/DOCX)"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/candidates/documents/resume"
+      }
+    },
+    {
+      "name": "Upload Profile Picture",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{candidateToken}}" }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { 
+              "key": "profilePicture", 
+              "type": "file", 
+              "src": "/path/to/picture.jpg",
+              "description": "Profile picture (JPG/PNG)"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/candidates/profile-picture"
+      }
+    },
+    {
+      "name": "Update Professional Info",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{candidateToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": {
+            "professionalInfo": {
+              "currentTitle": "Tech Lead",
+              "skills": [
+                {
+                  "name": "AWS",
+                  "level": "advanced",
+                  "yearsOfExperience": 2
+                }
+              ],
+              "salaryExpectation": {
+                "minimum": 120000,
+                "maximum": 180000,
+                "currency": "USD"
+              }
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/candidates/professional-info"
+      }
+    },
+    {
+      "name": "Add Education",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{candidateToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": {
+            "degree": "Master of Science",
+            "field": "Computer Science",
+            "institution": "Tech University",
+            "startYear": 2020,
+            "endYear": 2022,
+            "grade": "3.9/4.0",
+            "isCompleted": true
+          }
+        },
+        "url": "{{baseUrl}}/api/candidates/education"
+      }
+    },
+    {
+      "name": "Add Experience",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{candidateToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": {
+            "title": "Software Engineer",
+            "company": "Previous Corp",
+            "location": "Boston, USA",
+            "startDate": "2018-01-01",
+            "endDate": "2019-12-31",
+            "isCurrent": false,
+            "description": "Full stack development",
+            "achievements": ["Implemented CI/CD pipeline"],
+            "technologies": ["Java", "Spring Boot", "MySQL"]
+          }
+        },
+        "url": "{{baseUrl}}/api/candidates/experience"
+      }
+    },
+    {
+      "name": "Update Preferences",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{candidateToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": {
+            "preferences": {
+              "jobTypes": ["full-time", "contract"],
+              "workLocation": ["remote"],
+              "preferredLocations": ["New York", "San Francisco"],
+              "willingToRelocate": true
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/candidates/preferences"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    }
+  ]
+}

@@ -1,108 +1,102 @@
 const jwt = require('jsonwebtoken');
 const dbManager = require('../config/database');
-
-// Protect routes - verify JWT token
+ 
 const protect = async (req, res, next) => {
   try {
     let token;
-
-    // Get token from header
+ 
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     }
-
+ 
     if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Not authorized to access this route'
-      });
+      return res.status(401).json({ success: false, message: 'Token missing' });
     }
-
-    try {
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
-      // Get user model based on context (master or tenant)
-      let User;
-      if (decoded.role === 'super_admin') {
-        req.db = dbManager.getMasterConnection();
-        User = require('../models/master/SuperAdmin')(req.db);
+ 
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+ 
+    let Model;
+ 
+    if (decoded.role === 'super_admin') {
+      // ✅ Master DB for super admin
+      req.db = dbManager.getMasterConnection();
+      Model = require('../models/master/SuperAdmin')(req.db);
+ 
+    } else {
+      // ✅ Tenant-based users & candidates
+ 
+      const tenant = decoded.tenant || req.headers['x-tenant-id'];
+      if (!tenant) {
+        return res.status(400).json({
+          success: false,
+          message: 'Tenant is required for this user type'
+        });
+      }
+ 
+      req.db = await dbManager.getTenantDB(tenant);
+      req.tenantId = tenant;
+ 
+      if (decoded.type === 'candidate') {
+        Model = require('../models/tenant/Candidate')(req.db);
       } else {
-        // Use tenant subdomain from JWT or header
-        const tenantSubdomain = decoded.tenant || req.headers['x-tenant-id'];
-        if (!tenantSubdomain) {
-          return res.status(400).json({ success: false, message: 'Tenant subdomain required' });
-        }
-        req.db = await dbManager.getTenantDB(tenantSubdomain);
-        User = require('../models/tenant/User')(req.db);
+        Model = require('../models/tenant/User')(req.db);
       }
-
-      const user = await User.findById(decoded.id).select('-password');
-      
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: 'User not found'
-        });
-      }
-
-      if (!user.isActive) {
-        return res.status(401).json({
-          success: false,
-          message: 'Account is deactivated'
-        });
-      }
-
-      req.user = user;
-      next();
-    } catch (error) {
-      return res.status(401).json({
-        success: false,
-        message: 'Not authorized to access this route'
-      });
     }
+ 
+    const user = await Model.findById(decoded.id).select('-password -account.password');
+ 
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User not found' });
+    }
+ 
+    if (!user.isActive && (!user.account || !user.account.isActive)) {
+      return res.status(401).json({ success: false, message: 'Account is inactive' });
+    }
+ 
+    req.user = user;
+    req.userType = decoded.type;
+    next();
+ 
   } catch (error) {
-    console.error('Auth middleware error:', error);
-    res.status(500).json({
+    console.error("Auth Error =>", error);
+    return res.status(401).json({
       success: false,
-      message: 'Server error in authentication'
+      message: 'Authentication failed',
+      error: error.message
     });
   }
 };
-
-// Grant access to specific roles
-const authorize = (...roles) => {
+ 
+// ✅ Role authorization
+const authorize = (...allowedTypes) => {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
 
-    if (!roles.includes(req.user.role)) {
+    //!roles.includes(req.user.role)
+ 
+    if (!allowedTypes.includes(req.userType || req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: `User role ${req.user.role} is not authorized to access this route`
+        message: `${req.userType} is not allowed to access this route`
       });
     }
+ 
     next();
   };
 };
-
-// Super admin only
+ 
+ 
+// ✅ Super Admin only
 const superAdminOnly = (req, res, next) => {
   if (!req.user || req.user.role !== 'super_admin') {
     return res.status(403).json({
       success: false,
-      message: 'Access denied. Super admin privileges required.'
+      message: 'Super admin access only'
     });
   }
   next();
 };
-
-module.exports = {
-  protect,
-  authorize,
-  superAdminOnly
-};
+ 
+module.exports = { protect, authorize, superAdminOnly };

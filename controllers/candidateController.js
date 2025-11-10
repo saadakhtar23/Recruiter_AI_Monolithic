@@ -1,10 +1,11 @@
 const jwt = require('jsonwebtoken');
 const { sendEmail } = require('../utils/email');
 const { generateApplicationId } = require('../utils/helpers');
+const { cloudinary, upload } = require('../utils/cloudinary');
 
 // Generate JWT token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
+const generateToken = (data) => {
+  return jwt.sign(data, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || '7d'
   });
 };
@@ -21,7 +22,7 @@ const registerCandidate = async (req, res) => {
       education,
       experience,
       preferences,
-      password
+      account: { password }
     } = req.body;
 
     const Candidate = require('../models/tenant/Candidate')(req.db);
@@ -147,8 +148,12 @@ const loginCandidate = async (req, res) => {
     candidate.account.lastLogin = new Date();
     await candidate.save();
 
-    // Generate token
-    const token = generateToken(candidate._id);
+    // Generate token with tenant info
+    const token = generateToken({
+      id: candidate._id,
+      tenant: req.tenant.subdomain, // Add tenant subdomain
+      type: 'candidate'
+    });
 
     res.status(200).json({
       success: true,
@@ -163,7 +168,8 @@ const loginCandidate = async (req, res) => {
         token,
         tenant: {
           companyName: req.tenant.companyName,
-          branding: req.tenant.branding
+          branding: req.tenant.branding,
+          subdomain: req.tenant.subdomain // Add this for clarity
         }
       }
     });
@@ -261,7 +267,7 @@ const applyToJob = async (req, res) => {
     const Candidate = require('../models/tenant/Candidate')(req.db);
     const Application = require('../models/tenant/Application')(req.db);
 
-    // Find job by ID or shareable link
+    // Find job with active status and published
     const job = await JobDescription.findOne({
       $or: [
         { _id: jobId },
@@ -429,35 +435,90 @@ const getCandidateApplications = async (req, res) => {
 // @access  Private (Candidate)
 const uploadDocument = async (req, res) => {
   try {
-    // This would integrate with file upload service like Cloudinary
-    // For now, return a placeholder response
-    
-    const { documentType, file } = req.body;
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload a file'
+      });
+    }
 
-    // Simulate file upload
-    const uploadedDocument = {
-      filename: file.name,
-      url: `https://example.com/uploads/${file.name}`,
-      publicId: `candidate_${req.user.id}_${Date.now()}`,
+    const { documentType } = req.body;
+
+    // Validate document type
+    const validDocumentTypes = ['resume', 'coverLetter', 'certificate', 'profilePicture'];
+    if (!validDocumentTypes.includes(documentType)) {
+      // Delete uploaded file if document type is invalid
+      if (req.file.public_id) {
+        await cloudinary.uploader.destroy(req.file.public_id);
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid document type'
+      });
+    }
+
+    const Candidate = require('../models/tenant/Candidate')(req.db);
+
+    // Format document data
+    const documentData = {
+      url: req.file.path,
+      publicId: req.file.filename,
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      size: req.file.size,
       uploadedAt: new Date()
     };
 
-    const Candidate = require('../models/tenant/Candidate')(req.db);
-    
+    // If it's a profile picture, handle image optimization
+    if (documentType === 'profilePicture') {
+      documentData.url = cloudinary.url(req.file.public_id, {
+        width: 300,
+        height: 300,
+        crop: 'fill',
+        format: 'jpg'
+      });
+    }
+
+    // Delete old document if exists
+    const candidate = await Candidate.findById(req.user.id);
+    if (candidate.documents && candidate.documents[documentType] && candidate.documents[documentType].publicId) {
+      await cloudinary.uploader.destroy(candidate.documents[documentType].publicId);
+    }
+
+    // Update candidate document
     const updateField = `documents.${documentType}`;
-    const candidate = await Candidate.findByIdAndUpdate(
+    const updatedCandidate = await Candidate.findByIdAndUpdate(
       req.user.id,
-      { [updateField]: uploadedDocument },
+      { [updateField]: documentData },
       { new: true }
     );
+
+    if (!updatedCandidate) {
+      // Delete uploaded file if candidate update fails
+      await cloudinary.uploader.destroy(req.file.public_id);
+      return res.status(404).json({
+        success: false,
+        message: 'Candidate not found'
+      });
+    }
 
     res.status(200).json({
       success: true,
       message: 'Document uploaded successfully',
-      data: { document: uploadedDocument }
+      data: {
+        document: {
+          type: documentType,
+          ...documentData
+        }
+      }
     });
+
   } catch (error) {
     console.error('Upload document error:', error);
+    // Delete uploaded file if any other error occurs
+    if (req.file && req.file.public_id) {
+      await cloudinary.uploader.destroy(req.file.public_id);
+    }
     res.status(500).json({
       success: false,
       message: 'Error uploading document',
