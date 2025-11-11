@@ -37,7 +37,8 @@ app.use(cors({
       /^https?:\/\/[\w-]+\.lvh\.me:3000$/,
       /^https?:\/\/[\w-]+\.myapp\.com$/,
       'http://localhost:3000',
-      'http://localhost:3001'
+      'http://localhost:3001',
+      'http://localhost:5173'
     ];
     
     const isAllowed = allowedOrigins.some(pattern => {
